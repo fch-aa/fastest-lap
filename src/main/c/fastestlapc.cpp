@@ -1232,7 +1232,8 @@ struct Optimal_laptime_configuration
             }
         }
 
-        if ( doc.has_element("options/steady_state_speed") ) steady_state_speed = doc.get_element("options/initial_speed").get_value(scalar());
+        if ( doc.has_element("options/initial_speed") ) steady_state_speed = doc.get_element("options/initial_speed").get_value(scalar());
+        else if ( doc.has_element("options/steady_state_speed") ) steady_state_speed = doc.get_element("options/steady_state_speed").get_value(scalar());
 
         if ( doc.has_element("options/closed_simulation") ) is_closed = doc.get_element("options/closed_simulation").get_value(bool());
 

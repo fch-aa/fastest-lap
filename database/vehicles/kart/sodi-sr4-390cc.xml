@@ -1,0 +1,166 @@
+<!--
+  This model represents the dynamics of a go-kart
+  Reference: https://eprints.soton.ac.uk/385883/
+
+  Sodi SR4 with Honda GX390 official sources:
+    - https://www.sodikart.com/en-gb/karts/rental/sr4-29.html
+    - https://www.sodikart.com/content/images/karts/29/technical-plan-1476365574.jpg
+    - https://www.sodikart.com/en-gb/karts/engines/honda/gx390-4.html
+    - https://www.honda-engines-eu.com/en/products/power-units/gx390
+
+  Official specs used where this schema supports them:
+    - Engine displacement: 389 cm3 (reference only; not represented in this schema)
+    - Engine maximum power: 8.7 kW @ 3600 rpm
+    - Engine maximum net torque: 26.5 Nm @ 2500 rpm (reference only; no torque field in this schema)
+    - Overall dimensions: 1.914 m x 1.332 m x 0.670 m (reference only; not represented directly)
+    - Height with roll-over bar: 1.040 m / 0.890 m (reference only; not represented directly)
+    - Empty mass: 154 kg
+    - Simulation mass assumption: 244 kg total = 154 kg empty kart + 85 kg driver + 5 kg fuel
+    - Front tire radius: 0.131 m from 262 mm OD
+    - Rear tire radius: 0.1455 m from 291 mm OD
+    - Aerodynamic calibration assumption: Cd 0.78 and frontal area 1.05 m2 to better match
+      observed rental-kart top speed of about 92 km/h without reverting to the optimistic empty-kart baseline
+    - Tire grip calibration assumption: lateral peak factors reduced from the generic rental baseline
+      so the simulated optimal-control lap stays slightly quicker than the observed benchmark laps
+      on Plesse Internationale while remaining within realistic rental-kart tire performance
+
+  SR4 features such as the Fast Clips braking system, Proline 360 protection,
+  HEAD system, 3-angle pedals, and adjustable seat are not directly represented
+  by this schema.
+
+  Any field explicitly marked as estimated reuses the rental-kart.xml baseline
+  because no official SR4 value was found in the cited public sources.
+-->
+<vehicle type="kart-6dof">
+    <!-- Estimated from rental-kart.xml: track, stiffness.chassis, stiffness.antiroll, beta-steering.left, beta-steering.right. -->
+    <front-axle model="axle-car">
+        <track units="m">1.055</track>
+        <stiffness>
+            <chassis>17.7e3</chassis>
+            <antiroll>0.0</antiroll>
+        </stiffness>
+        <beta-steering>
+            <left>-0.058</left>
+            <right>0.058</right>
+        </beta-steering>
+    </front-axle> 
+
+    <rear-axle model="axle-car">
+        <!-- Estimated from rental-kart.xml: track, stiffness.chassis, stiffness.antiroll, inertia, smooth_throttle_coeff, brakes.max_torque. -->
+        <track units="m">1.2</track>
+        <stiffness>
+            <chassis>60.0e3</chassis>
+            <antiroll>0.0</antiroll>
+        </stiffness>
+        <inertia>0.2</inertia>
+        <smooth_throttle_coeff> 0.01 </smooth_throttle_coeff>
+        <brakes>
+            <max_torque units="N.m">200.0</max_torque>
+        </brakes>
+        <engine>
+            <maximum-power units="kW"> 8.7 </maximum-power>
+        </engine>
+    </rear-axle>
+
+    <chassis model="chassis-car">
+        <!-- Geometry and inertia remain estimated from rental-kart.xml. Mass is increased to represent
+             the empty kart plus an 85 kg driver and approximately 5 kg of fuel; aero drag is also
+             increased relative to the empty-kart baseline, but kept low enough to preserve a realistic
+             rental-kart top speed of roughly 92 km/h. -->
+        <com>0.0 0.0 -0.25</com>
+        <front_axle>0.645 0.0 0.111</front_axle>
+        <rear_axle>-0.4 0.0 0.111</rear_axle>
+        <mass>244.0</mass>
+        <inertia>
+            <Ixx> 20.0 </Ixx>  <Ixy> 0.0  </Ixy> <Ixz> 5.0  </Ixz>
+            <Iyx> 0.0  </Iyx>  <Iyy> 15.0 </Iyy> <Iyz> 0.0  </Iyz>
+            <Izx> 5.0  </Izx>  <Izy> 0.0  </Izy> <Izz> 25.0 </Izz>
+        </inertia>
+        <aerodynamics>
+            <rho>1.2</rho>
+            <cd> 0.78 </cd>
+            <cl> 0.0 </cl>
+            <area units="m2"> 1.05 </area>
+        </aerodynamics>
+    </chassis>
+
+    <!-- Estimated from rental-kart.xml except rear-tire.radius, which uses the official SR4 291 mm rear tire OD.
+         Rear lateral grip is trimmed to represent a realistic rental-kart tire state rather than an idealized fresh-tire peak,
+         but not so far that the optimal-control laptime matches average human laps. -->
+    <rear-tire model="tire-pacejka" type="normal">
+        <radius>0.1455</radius> 
+        <radial-stiffness>61.3e3</radial-stiffness>
+        <radial-damping>1.0e3</radial-damping>
+        <nominal-vertical-load>560</nominal-vertical-load>
+        <lambdaFz0>1.6</lambdaFz0>
+        <Fz-max-ref2> 1.0 </Fz-max-ref2>
+        <longitudinal>
+            <pure>
+                <pCx1>2.3</pCx1>
+                <pDx1>0.9</pDx1>
+                <pEx1>0.95</pEx1>
+                <pKx1>20.0</pKx1>
+                <pKx2>1.0</pKx2>
+                <pKx3>-0.5</pKx3>
+            </pure>
+            <combined>
+                <rBx1>14.0</rBx1>
+                <rCx1>1.0</rCx1>
+            </combined>
+        </longitudinal>
+        <lateral>
+            <pure>
+                <pCy1>2.3</pCy1>
+                <pDy1>1.14</pDy1>
+                <pEy1>0.9</pEy1>
+                <pKy1>37.6</pKy1>
+                <pKy2>1.6</pKy2>
+                <pKy4>2.0</pKy4>
+            </pure>
+            <combined>
+                <rBy1>12.0</rBy1>
+                <rCy1>0.6</rCy1>
+            </combined>
+        </lateral>
+    </rear-tire>
+
+    <!-- Estimated from rental-kart.xml except front-tire.radius, which uses the official SR4 262 mm front tire OD.
+         Front lateral grip is also reduced slightly so the overall lap time remains realistic while preserving a modest
+         optimal-control advantage over real-world benchmark laps. -->
+    <front-tire model="tire-pacejka" type="only lateral">
+        <radius>0.131</radius> 
+        <radial-stiffness>64.5e3</radial-stiffness>
+        <radial-damping>1.0e3</radial-damping>
+        <nominal-vertical-load>560</nominal-vertical-load>
+        <lambdaFz0>1.6</lambdaFz0>
+        <Fz-max-ref2> 1.0 </Fz-max-ref2>
+        <longitudinal>
+            <pure>
+                <pCx1>0.0</pCx1>
+                <pDx1>0.0</pDx1>
+                <pEx1>0.0</pEx1>
+                <pKx1>0.0</pKx1>
+                <pKx2>0.0</pKx2>
+                <pKx3>0.0</pKx3>
+            </pure>
+            <combined>
+                <rBx1>0.0</rBx1>
+                <rCx1>0.0</rCx1> 
+            </combined>
+        </longitudinal>
+        <lateral>
+            <pure>
+                <pCy1>2.13</pCy1>
+                <pDy1>1.195</pDy1>
+                <pEy1>0.8</pEy1>
+                <pKy1>34.1</pKy1>
+                <pKy2>1.6</pKy2>
+                <pKy4>2.0</pKy4>
+            </pure>
+            <combined>
+                <rBy1>0.0</rBy1>
+                <rCy1>0.0</rCy1>
+            </combined>
+        </lateral>
+    </front-tire>
+</vehicle>
