@@ -90,6 +90,10 @@ extern fastestlapc_API void vehicle_declare_new_variable_parameter(const char* c
     const char* parameter_alias, const int n_parameters, const double* parameter_values,
     const int mesh_size, const int* mesh_parameter_indexes, const double* mesh_points);
 
+extern fastestlapc_API void vehicle_set_wet_surface(const char* c_vehicle_name,
+    double base_grip_multiplier, double dry_line_penalty, double dry_line_width,
+    const int n_points, const double* arclength, const double* dry_line_lateral_displacement);
+
 extern fastestlapc_API void vehicle_change_track(const char* c_vehicle, const char* c_track);       // [TEST OK]
 
 extern fastestlapc_API void track_set_track_limit_correction(const char* c_track_name, const char* side, const int n_points, const double* s, const double* w_correction);

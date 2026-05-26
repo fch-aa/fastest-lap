@@ -50,6 +50,8 @@ class Tire_pacejka : public Tire<Timeseries_t, state_start, control_start>
     template<typename T>
     void set_parameter(const std::string& parameter, const T value);
 
+    void set_grip_multiplier(const Timeseries_t& grip_multiplier) { _grip_multiplier = grip_multiplier; }
+
     void fill_xml(Xml_document& doc) const;
 
     //! Calls Tire::update(x0,v0,omega) of the base class, and calls update_self()
@@ -155,8 +157,11 @@ class Tire_pacejka : public Tire<Timeseries_t, state_start, control_start>
     {
         return
         {
+            {this->get_name() + ".grip-multiplier", _grip_multiplier}
         };
     }
+
+    Timeseries_t _grip_multiplier = 1.0; //! [in] Surface grip multiplier applied to longitudinal and lateral tire force.
 
 };
 

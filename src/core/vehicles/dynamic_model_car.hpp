@@ -49,6 +49,100 @@ void Dynamic_model_car<Timeseries_t,Chassis_t,RoadModel_t>::set_parameter(const 
 
 
 template<typename Timeseries_t, typename Chassis_t, typename RoadModel_t>
+void Dynamic_model_car<Timeseries_t,Chassis_t,RoadModel_t>::set_wet_surface(
+    scalar base_grip_multiplier,
+    scalar dry_line_penalty,
+    scalar dry_line_width,
+    const std::vector<scalar>& arclength,
+    const std::vector<scalar>& dry_line_lateral_displacement)
+{
+    if ( arclength.size() != dry_line_lateral_displacement.size() )
+        throw fastest_lap_exception("[ERROR] Dynamic_model_car::set_wet_surface -> arclength and dry line vectors must have the same size");
+
+    if ( arclength.size() < 2 )
+        throw fastest_lap_exception("[ERROR] Dynamic_model_car::set_wet_surface -> at least two dry line points are required");
+
+    if ( !std::is_sorted(arclength.cbegin(), arclength.cend()) )
+        throw fastest_lap_exception("[ERROR] Dynamic_model_car::set_wet_surface -> arclength must be sorted");
+
+    if ( dry_line_width <= 0.0 )
+        throw fastest_lap_exception("[ERROR] Dynamic_model_car::set_wet_surface -> dry line width must be positive");
+
+    if ( base_grip_multiplier <= 0.0 )
+        throw fastest_lap_exception("[ERROR] Dynamic_model_car::set_wet_surface -> base grip multiplier must be positive");
+
+    if ( dry_line_penalty < 0.0 || dry_line_penalty >= 1.0 )
+        throw fastest_lap_exception("[ERROR] Dynamic_model_car::set_wet_surface -> dry line penalty must be in [0,1)");
+
+    _wet_surface_enabled = true;
+    _wet_base_grip_multiplier = base_grip_multiplier;
+    _wet_dry_line_penalty = dry_line_penalty;
+    _wet_dry_line_width = dry_line_width;
+    _wet_surface_arclength = arclength;
+    _wet_surface_dry_line_lateral_displacement = dry_line_lateral_displacement;
+}
+
+
+template<typename Timeseries_t, typename Chassis_t, typename RoadModel_t>
+void Dynamic_model_car<Timeseries_t,Chassis_t,RoadModel_t>::clear_wet_surface()
+{
+    _wet_surface_enabled = false;
+    _wet_surface_arclength.clear();
+    _wet_surface_dry_line_lateral_displacement.clear();
+}
+
+
+template<typename Timeseries_t, typename Chassis_t, typename RoadModel_t>
+scalar Dynamic_model_car<Timeseries_t,Chassis_t,RoadModel_t>::interpolate_dry_line_lateral_displacement(scalar s) const
+{
+    auto it = std::upper_bound(_wet_surface_arclength.cbegin(), _wet_surface_arclength.cend(), s);
+
+    if ( it == _wet_surface_arclength.cbegin() )
+        return _wet_surface_dry_line_lateral_displacement.front();
+
+    if ( it == _wet_surface_arclength.cend() )
+        return _wet_surface_dry_line_lateral_displacement.back();
+
+    const auto index_right = static_cast<size_t>(std::distance(_wet_surface_arclength.cbegin(), it));
+    const auto index_left = index_right - 1;
+    const scalar s_left = _wet_surface_arclength[index_left];
+    const scalar s_right = _wet_surface_arclength[index_right];
+    const scalar xi = (s - s_left)/(s_right - s_left);
+
+    return _wet_surface_dry_line_lateral_displacement[index_left]
+        + xi*(_wet_surface_dry_line_lateral_displacement[index_right]
+              - _wet_surface_dry_line_lateral_displacement[index_left]);
+}
+
+
+template<typename Timeseries_t, typename Chassis_t, typename RoadModel_t>
+void Dynamic_model_car<Timeseries_t,Chassis_t,RoadModel_t>::apply_wet_surface_grip_multiplier(
+    const std::array<Timeseries_t,number_of_inputs>& inputs,
+    scalar s)
+{
+    Timeseries_t grip_multiplier = 1.0;
+
+    if constexpr (road_is_curvilinear<RoadModel_t>::value)
+    {
+        if ( _wet_surface_enabled )
+        {
+            const scalar dry_line_n = interpolate_dry_line_lateral_displacement(s);
+            const Timeseries_t dn = inputs[RoadModel_t::input_names::lateral_displacement] - dry_line_n;
+            const scalar inv_width = 1.0/_wet_dry_line_width;
+            const Timeseries_t dry_line_penalty = _wet_dry_line_penalty*exp(-0.5*dn*dn*inv_width*inv_width);
+
+            grip_multiplier = _wet_base_grip_multiplier*(1.0 - dry_line_penalty);
+        }
+    }
+
+    _chassis.get_front_axle().template get_tire<0>().set_grip_multiplier(grip_multiplier);
+    _chassis.get_front_axle().template get_tire<1>().set_grip_multiplier(grip_multiplier);
+    _chassis.get_rear_axle().template get_tire<0>().set_grip_multiplier(grip_multiplier);
+    _chassis.get_rear_axle().template get_tire<1>().set_grip_multiplier(grip_multiplier);
+}
+
+
+template<typename Timeseries_t, typename Chassis_t, typename RoadModel_t>
 inline auto Dynamic_model_car<Timeseries_t,Chassis_t,RoadModel_t>::operator()
     (const std::array<Timeseries_t,number_of_inputs>& inputs, const std::array<Timeseries_t,number_of_controls>& controls, scalar time) -> Dynamics_equations
 {
@@ -65,6 +159,7 @@ inline auto Dynamic_model_car<Timeseries_t,Chassis_t,RoadModel_t>::operator()
     // (3) Set state and controls
     _chassis.set_state_and_controls(inputs,controls);
     _road.set_state_and_controls(time,inputs,controls);
+    apply_wet_surface_grip_multiplier(inputs,time);
 
     // (4) Update
 

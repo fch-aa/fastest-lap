@@ -108,8 +108,8 @@ inline void Tire_pacejka<Timeseries_t,Pacejka_model,state_start,control_start>::
 {
     // Compute the magic formula forces
     // For now, lets use a steady-state version
-    _Smagic = _model.force_combined_longitudinal_magic(base_type::_kappa,base_type::_lambda,Fz);
-    _Fmagic = _model.force_combined_lateral_magic(base_type::_kappa, base_type::_lambda, Fz);
+    _Smagic = _grip_multiplier*_model.force_combined_longitudinal_magic(base_type::_kappa,base_type::_lambda,Fz);
+    _Fmagic = _grip_multiplier*_model.force_combined_lateral_magic(base_type::_kappa, base_type::_lambda, Fz);
 
     base_type::_F[X] = _Smagic; 
     base_type::_F[Y] = _Fmagic;

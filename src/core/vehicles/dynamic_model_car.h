@@ -1,6 +1,8 @@
 #ifndef DYNAMIC_MODEL_CAR_H
 #define DYNAMIC_MODEL_CAR_H
 
+#include <algorithm>
+#include <iterator>
 #include <map>
 #include <vector>
 #include "lion/foundation/types.h"
@@ -61,6 +63,14 @@ class Dynamic_model_car : public Dynamic_model<Timeseries_t>
     //! Modifyer to set a parameter
     template<typename T>
     void set_parameter(const std::string& parameter, const T value);
+
+    void set_wet_surface(scalar base_grip_multiplier,
+                         scalar dry_line_penalty,
+                         scalar dry_line_width,
+                         const std::vector<scalar>& arclength,
+                         const std::vector<scalar>& dry_line_lateral_displacement);
+
+    void clear_wet_surface();
 
     //! Get the input states for given states
     std::array<Timeseries_t,number_of_inputs>
@@ -188,9 +198,21 @@ class Dynamic_model_car : public Dynamic_model<Timeseries_t>
     }
 
  private:
+    scalar interpolate_dry_line_lateral_displacement(scalar s) const;
+
+    void apply_wet_surface_grip_multiplier(const std::array<Timeseries_t,number_of_inputs>& inputs,
+                                           scalar s);
+
     Frame<Timeseries_t> _inertial_frame;    //! Inertial frame that serves as an absolute coordinate system
     Chassis_t _chassis;                     //! The chassis
     RoadModel_t _road;                      //! The road
+
+    bool _wet_surface_enabled = false;
+    scalar _wet_base_grip_multiplier = 1.0;
+    scalar _wet_dry_line_penalty = 0.0;
+    scalar _wet_dry_line_width = 1.0;
+    std::vector<scalar> _wet_surface_arclength;
+    std::vector<scalar> _wet_surface_dry_line_lateral_displacement;
 };
 
 #include "dynamic_model_car.hpp"

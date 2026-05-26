@@ -18,12 +18,21 @@ sys.path.append(
 
 import fastest_lap
 
-VEHICLE_NAME = "sodi_sr4_390cc"
+DRY_VEHICLE_NAME = "sodi_sr4_390cc_dry"
+WET_VEHICLE_NAME = "sodi_sr4_390cc_wet"
 TRACK_NAME = "plesse_internationale_karting"
-OUTPUT_PREFIX = "run/"
 ARTIFACTS_DIR = os.path.join(
     os.path.dirname(__file__), "artifacts", "sodi_sr4_plesse_internationale"
 )
+WET_ARTIFACTS_DIR = os.path.join(
+    os.path.dirname(__file__), "artifacts", "sodi_sr4_plesse_internationale_wet_line"
+)
+COMPARISON_ARTIFACTS_DIR = os.path.join(
+    os.path.dirname(__file__), "artifacts", "sodi_sr4_plesse_internationale_comparison"
+)
+WET_BASE_GRIP_MULTIPLIER = 0.74
+WET_DRY_LINE_PENALTY = 0.28
+WET_DRY_LINE_WIDTH_M = 0.8
 ACCENT = "#ffb000"
 ACCENT_RED = "#ff5f57"
 ACCENT_GREEN = "#58c472"
@@ -90,7 +99,13 @@ def interpolate_realtime_samples(run, fps):
     return samples
 
 
-def save_realtime_video(run, track_coordinates):
+def save_realtime_video(
+    run,
+    track_coordinates,
+    artifacts_dir=ARTIFACTS_DIR,
+    title="Sodi SR4 390cc at Plesse Internationale",
+    video_filename="plesse-internationale_sodi-sr4.mp4",
+):
     if fastest_lap.plt is None:
         raise RuntimeError("matplotlib is not available; cannot generate video")
 
@@ -149,7 +164,7 @@ def save_realtime_video(run, track_coordinates):
     speed_ax = fig.add_subplot(grid[1, :])
     pedals_ax = fig.add_subplot(grid[2, :])
 
-    style_axis(track_ax, "Sodi SR4 390cc at Plesse Internationale")
+    style_axis(track_ax, title)
     track_ax.set_aspect("equal", adjustable="datalim")
     track_ax.set_anchor("W")
     track_ax.grid(False)
@@ -453,7 +468,7 @@ def save_realtime_video(run, track_coordinates):
         blit=False,
     )
 
-    video_path = os.path.join(ARTIFACTS_DIR, "plesse-internationale_sodi-sr4.mp4")
+    video_path = os.path.join(artifacts_dir, video_filename)
     writer = FFMpegWriter(
         fps=fps, codec="libx264", bitrate=6000, extra_args=["-pix_fmt", "yuv420p"]
     )
@@ -463,14 +478,20 @@ def save_realtime_video(run, track_coordinates):
     return video_path
 
 
-def save_visualizations(run):
+def save_visualizations(
+    run,
+    artifacts_dir=ARTIFACTS_DIR,
+    title="Sodi SR4 390cc at Plesse Internationale",
+    video_filename="plesse-internationale_sodi-sr4.mp4",
+    make_video=True,
+):
     if fastest_lap.plt is None:
         raise RuntimeError(
             "matplotlib is not available; cannot generate visualizations"
         )
 
     plt = fastest_lap.plt
-    os.makedirs(ARTIFACTS_DIR, exist_ok=True)
+    os.makedirs(artifacts_dir, exist_ok=True)
 
     s = np.array(run["road.arclength"])
     x = np.array(run["chassis.position.x"])
@@ -513,7 +534,7 @@ def save_visualizations(run):
     track_ax = track_fig.add_subplot(grid[0, 0])
     pedals_ax = track_fig.add_subplot(grid[1, 0])
 
-    style_axis(track_ax, "Sodi SR4 390cc at Plesse Internationale")
+    style_axis(track_ax, title)
     track_ax.set_aspect("equal", adjustable="datalim")
     track_ax.set_anchor("C")
     track_ax.grid(False)
@@ -558,7 +579,7 @@ def save_visualizations(run):
     pedals_ax.grid(True, alpha=0.24, color=grid_color)
 
     track_fig.savefig(
-        os.path.join(ARTIFACTS_DIR, "track_map.png"),
+        os.path.join(artifacts_dir, "track_map.png"),
         dpi=160,
         facecolor=track_fig.get_facecolor(),
     )
@@ -573,7 +594,7 @@ def save_visualizations(run):
     speed_ax.grid(True, alpha=0.3)
     speed_fig.tight_layout()
     speed_fig.savefig(
-        os.path.join(ARTIFACTS_DIR, "speed_trace.png"), dpi=160, bbox_inches="tight"
+        os.path.join(artifacts_dir, "speed_trace.png"), dpi=160, bbox_inches="tight"
     )
     plt.close(speed_fig)
 
@@ -592,7 +613,7 @@ def save_visualizations(run):
     throttle_ax.grid(True, alpha=0.3)
     control_fig.tight_layout()
     control_fig.savefig(
-        os.path.join(ARTIFACTS_DIR, "controls.png"), dpi=160, bbox_inches="tight"
+        os.path.join(artifacts_dir, "controls.png"), dpi=160, bbox_inches="tight"
     )
     plt.close(control_fig)
 
@@ -605,26 +626,155 @@ def save_visualizations(run):
     lap_time_ax.grid(True, alpha=0.3)
     lap_time_fig.tight_layout()
     lap_time_fig.savefig(
-        os.path.join(ARTIFACTS_DIR, "lap_time_trace.png"), dpi=160, bbox_inches="tight"
+        os.path.join(artifacts_dir, "lap_time_trace.png"), dpi=160, bbox_inches="tight"
     )
     plt.close(lap_time_fig)
 
-    summary_path = os.path.join(ARTIFACTS_DIR, "summary.txt")
+    summary_path = os.path.join(artifacts_dir, "summary.txt")
     with open(summary_path, "w", encoding="ascii") as summary_file:
         summary_file.write(f"Laptime: {run['laptime']:.3f} s\n")
         summary_file.write(f"Max speed: {speed_kmh.max():.2f} km/h\n")
         summary_file.write(f"Track points: {len(s)}\n")
 
-    video_path = save_realtime_video(
-        run, (x_center, y_center, x_left, y_left, x_right, y_right, _)
-    )
+    video_path = None
+    if make_video:
+        video_path = save_realtime_video(
+            run,
+            (x_center, y_center, x_left, y_left, x_right, y_right, _),
+            artifacts_dir,
+            title,
+            video_filename,
+        )
 
-    return ARTIFACTS_DIR, video_path
+    return artifacts_dir, video_path
+
+
+def save_comparison(dry_run, wet_run):
+    if fastest_lap.plt is None:
+        raise RuntimeError("matplotlib is not available; cannot generate comparison")
+
+    plt = fastest_lap.plt
+    os.makedirs(COMPARISON_ARTIFACTS_DIR, exist_ok=True)
+
+    dry_s = np.array(dry_run["road.arclength"])
+    wet_s = np.array(wet_run["road.arclength"])
+    dry_speed_kmh = np.array(dry_run["chassis.velocity.x"]) * 3.6
+    wet_speed_kmh = np.array(wet_run["chassis.velocity.x"]) * 3.6
+    dry_n = np.array(dry_run["road.lateral-displacement"])
+    wet_n = np.array(wet_run["road.lateral-displacement"])
+    wet_grip = np.array(wet_run["rear-axle.left-tire.grip-multiplier"])
+    wet_line_shift = wet_n - np.interp(wet_s, dry_s, dry_n)
+
+    fig = plt.figure(figsize=(14, 10), dpi=150)
+    speed_ax = fig.add_subplot(311)
+    line_ax = fig.add_subplot(312)
+    grip_ax = fig.add_subplot(313)
+
+    speed_ax.plot(dry_s, dry_speed_kmh, label="Dry", color=ACCENT, linewidth=1.4)
+    speed_ax.plot(wet_s, wet_speed_kmh, label="Wet line", color="#2477ff", linewidth=1.4)
+    speed_ax.set_title("Dry vs Wet-Line Simulation")
+    speed_ax.set_ylabel("Speed [km/h]")
+    speed_ax.grid(True, alpha=0.3)
+    speed_ax.legend()
+
+    line_ax.plot(dry_s, dry_n, label="Dry reference line", color=ACCENT, linewidth=1.2)
+    line_ax.plot(wet_s, wet_n, label="Wet optimized line", color="#2477ff", linewidth=1.2)
+    line_ax.set_ylabel("Lateral displacement [m]")
+    line_ax.grid(True, alpha=0.3)
+    line_ax.legend()
+
+    grip_ax.plot(wet_s, wet_grip, color="#2477ff", linewidth=1.2)
+    grip_ax.set_xlabel("Arclength [m]")
+    grip_ax.set_ylabel("Wet grip multiplier [-]")
+    grip_ax.grid(True, alpha=0.3)
+
+    fig.tight_layout()
+    comparison_plot = os.path.join(COMPARISON_ARTIFACTS_DIR, "dry_vs_wet_line.png")
+    fig.savefig(comparison_plot, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    summary_path = os.path.join(COMPARISON_ARTIFACTS_DIR, "summary.txt")
+    with open(summary_path, "w", encoding="ascii") as summary_file:
+        summary_file.write(f"Dry laptime: {dry_run['laptime']:.3f} s\n")
+        summary_file.write(f"Wet-line laptime: {wet_run['laptime']:.3f} s\n")
+        summary_file.write(
+            f"Wet delta: {wet_run['laptime'] - dry_run['laptime']:.3f} s\n"
+        )
+        summary_file.write(
+            f"Mean absolute wet-line shift from dry line: {np.mean(np.abs(wet_line_shift)):.3f} m\n"
+        )
+        summary_file.write(
+            f"Max absolute wet-line shift from dry line: {np.max(np.abs(wet_line_shift)):.3f} m\n"
+        )
+        summary_file.write(f"Wet base grip multiplier: {WET_BASE_GRIP_MULTIPLIER:.3f}\n")
+        summary_file.write(f"Dry line wet penalty: {WET_DRY_LINE_PENALTY:.3f}\n")
+        summary_file.write(f"Dry line penalty width: {WET_DRY_LINE_WIDTH_M:.3f} m\n")
+        summary_file.write(f"Min wet grip multiplier: {wet_grip.min():.3f}\n")
+        summary_file.write(f"Max wet grip multiplier: {wet_grip.max():.3f}\n")
+
+    return COMPARISON_ARTIFACTS_DIR, comparison_plot
+
+
+def build_options(output_prefix):
+    options = "<options>"
+    options += "    <output_variables>"
+    options += f"        <prefix>{output_prefix}</prefix>"
+    options += "        <variables>"
+    options += "            <laptime/>"
+    options += "            <chassis.position.x/>"
+    options += "            <chassis.position.y/>"
+    options += "            <front-axle.steering-angle/>"
+    options += "            <rear-axle.throttle/>"
+    options += "            <chassis.velocity.x/>"
+    options += "            <road.arclength/>"
+    options += "            <road.lateral-displacement/>"
+    options += "            <time/>"
+    options += "            <chassis.attitude.yaw/>"
+    options += "            <chassis.omega.z/>"
+    options += "            <chassis.velocity.y/>"
+    options += "            <rear-axle.left-tire.grip-multiplier/>"
+    options += "        </variables>"
+    options += "    </output_variables>"
+    options += "    <initial_speed>30.0</initial_speed>"
+    options += "    <print_level>5</print_level>"
+    options += "</options>"
+
+    return options
+
+
+def run_optimal_laptime(vehicle_name, s, output_prefix):
+    run = fastest_lap.download_variables(
+        *fastest_lap.optimal_laptime(
+            vehicle_name, TRACK_NAME, s, build_options(output_prefix)
+        )
+    )
+    required_variables = (
+        "laptime",
+        "road.arclength",
+        "road.lateral-displacement",
+        "chassis.position.x",
+        "chassis.position.y",
+        "chassis.velocity.x",
+    )
+    missing_variables = [name for name in required_variables if name not in run]
+    if missing_variables:
+        available = ", ".join(sorted(run.keys())) or "none"
+        raise RuntimeError(
+            f"Missing optimal-laptime outputs for {vehicle_name}: "
+            f"{', '.join(missing_variables)}. Available outputs: {available}"
+        )
+
+    return run
 
 
 def main():
     fastest_lap.create_vehicle_from_xml(
-        VEHICLE_NAME,
+        DRY_VEHICLE_NAME,
+        "../../../../database/vehicles/kart/sodi-sr4-390cc.xml",
+    )
+
+    fastest_lap.create_vehicle_from_xml(
+        WET_VEHICLE_NAME,
         "../../../../database/vehicles/kart/sodi-sr4-390cc.xml",
     )
 
@@ -635,38 +785,45 @@ def main():
 
     s = fastest_lap.track_download_data(TRACK_NAME, "arclength")
 
-    options = "<options>"
-    options += "    <output_variables>"
-    options += f"        <prefix>{OUTPUT_PREFIX}</prefix>"
-    options += "        <variables>"
-    options += "            <laptime/>"
-    options += "            <chassis.position.x/>"
-    options += "            <chassis.position.y/>"
-    options += "            <front-axle.steering-angle/>"
-    options += "            <rear-axle.throttle/>"
-    options += "            <chassis.velocity.x/>"
-    options += "            <road.arclength/>"
-    options += "            <time/>"
-    options += "            <chassis.attitude.yaw/>"
-    options += "            <chassis.omega.z/>"
-    options += "            <chassis.velocity.y/>"
-    options += "        </variables>"
-    options += "    </output_variables>"
-    options += "    <initial_speed>30.0</initial_speed>"
-    options += "    <print_level>5</print_level>"
-    options += "</options>"
-
-    run = fastest_lap.download_variables(
-        *fastest_lap.optimal_laptime(VEHICLE_NAME, TRACK_NAME, s, options)
+    dry_run = run_optimal_laptime(DRY_VEHICLE_NAME, s, "dry/")
+    fastest_lap.vehicle_set_wet_surface(
+        WET_VEHICLE_NAME,
+        WET_BASE_GRIP_MULTIPLIER,
+        WET_DRY_LINE_PENALTY,
+        WET_DRY_LINE_WIDTH_M,
+        dry_run["road.arclength"],
+        dry_run["road.lateral-displacement"],
     )
+    wet_run = run_optimal_laptime(WET_VEHICLE_NAME, s, "wet/")
 
-    artifacts_dir, video_path = save_visualizations(run)
+    artifacts_dir, video_path = save_visualizations(
+        dry_run,
+        ARTIFACTS_DIR,
+        "Sodi SR4 390cc at Plesse Internationale - dry line",
+        "plesse-internationale_sodi-sr4_dry.mp4",
+    )
+    wet_artifacts_dir, wet_video_path = save_visualizations(
+        wet_run,
+        WET_ARTIFACTS_DIR,
+        "Sodi SR4 390cc at Plesse Internationale - wet line",
+        "plesse-internationale_sodi-sr4_wet-line.mp4",
+        make_video=False,
+    )
+    comparison_dir, comparison_plot = save_comparison(dry_run, wet_run)
 
-    print(f"Laptime: {run['laptime']:.3f} s")
-    print(f"Max speed: {max(run['chassis.velocity.x']) * 3.6:.2f} km/h")
-    print(f"Track points: {len(run['road.arclength'])}")
-    print(f"Visualizations: {artifacts_dir}")
+    print(f"Dry laptime: {dry_run['laptime']:.3f} s")
+    print(f"Wet-line laptime: {wet_run['laptime']:.3f} s")
+    print(f"Wet delta: {wet_run['laptime'] - dry_run['laptime']:.3f} s")
+    print(f"Dry max speed: {max(dry_run['chassis.velocity.x']) * 3.6:.2f} km/h")
+    print(f"Wet max speed: {max(wet_run['chassis.velocity.x']) * 3.6:.2f} km/h")
+    print(f"Track points: {len(dry_run['road.arclength'])}")
+    print(f"Dry visualizations: {artifacts_dir}")
+    print(f"Wet visualizations: {wet_artifacts_dir}")
+    print(f"Comparison: {comparison_dir}")
+    print(f"Comparison plot: {comparison_plot}")
     print(f"Realtime MP4: {video_path}")
+    if wet_video_path is not None:
+        print(f"Wet realtime MP4: {wet_video_path}")
 
 
 if __name__ == "__main__":

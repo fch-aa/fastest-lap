@@ -74,6 +74,10 @@ class Axle
     const typename std::tuple_element<I,Tires_tuple>::type& get_tire() const 
         { return std::get<I>(_tires); }
 
+    template<size_t I>
+    typename std::tuple_element<I,Tires_tuple>::type& get_tire()
+        { return std::get<I>(_tires); }
+
     //! Get the force acting on the axle center [N]
     const Vector3d<Timeseries_t>& get_force() const { return _F; }
 

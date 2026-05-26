@@ -255,6 +255,30 @@ def vehicle_declare_new_constant_parameter(vehicle_name, parameter_path, paramet
 	c_lib.vehicle_declare_new_constant_parameter(c_vehicle_name, c_parameter_path, c_parameter_alias, c.c_double(parameter_value));
 	return;
 
+def vehicle_set_wet_surface(vehicle_name, base_grip_multiplier, dry_line_penalty, dry_line_width, arclength, dry_line_lateral_displacement):
+	if len(arclength) != len(dry_line_lateral_displacement):
+		raise ValueError("arclength and dry_line_lateral_displacement must have the same length")
+
+	c_vehicle_name = c.c_char_p((vehicle_name).encode('utf-8'))
+	n = len(arclength)
+	c_arclength = (c.c_double*n)()
+	c_dry_line = (c.c_double*n)()
+
+	for i in range(n):
+		c_arclength[i] = arclength[i]
+		c_dry_line[i] = dry_line_lateral_displacement[i]
+
+	c_lib.vehicle_set_wet_surface(
+		c_vehicle_name,
+		c.c_double(base_grip_multiplier),
+		c.c_double(dry_line_penalty),
+		c.c_double(dry_line_width),
+		c.c_int(n),
+		c_arclength,
+		c_dry_line,
+	)
+	return
+
 def vehicle_change_track(vehicle_name, track_name):
 	c_vehicle_name = c.c_char_p((vehicle_name).encode('utf-8'));
 	c_track_name = c.c_char_p((track_name).encode('utf-8'));

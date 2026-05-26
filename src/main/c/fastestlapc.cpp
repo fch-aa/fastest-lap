@@ -984,6 +984,34 @@ void vehicle_declare_new_variable_parameter(const char* c_vehicle_name, const ch
 }
 
 
+void vehicle_set_wet_surface(const char* c_vehicle_name,
+    double base_grip_multiplier, double dry_line_penalty, double dry_line_width,
+    const int n_points, const double* c_arclength, const double* c_dry_line_lateral_displacement)
+{
+ try
+ {
+    const std::string vehicle_name(c_vehicle_name);
+    const std::vector<scalar> arclength(c_arclength, c_arclength + n_points);
+    const std::vector<scalar> dry_line_lateral_displacement(
+        c_dry_line_lateral_displacement, c_dry_line_lateral_displacement + n_points);
+
+    if ( table_f1_3dof.count(vehicle_name) != 0 )
+    {
+        table_f1_3dof.at(vehicle_name).set_wet_surface(base_grip_multiplier, dry_line_penalty, dry_line_width,
+                                                       arclength, dry_line_lateral_displacement);
+    }
+    else if ( table_kart_6dof.count(vehicle_name) != 0)
+    {
+        table_kart_6dof.at(vehicle_name).set_wet_surface(base_grip_multiplier, dry_line_penalty, dry_line_width,
+                                                        arclength, dry_line_lateral_displacement);
+    }
+    else
+        throw fastest_lap_exception("Vehicle type not recognized");
+ }
+ CATCH()
+}
+
+
 void vehicle_equations(double* dqdt, double** jac_dqdt, double*** h_dqdt, const char* vehicle, double* q, double* u, double s)
 {
 

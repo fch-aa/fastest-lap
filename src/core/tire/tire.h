@@ -135,6 +135,9 @@ class Tire
     //! Get the database path
     const std::string& get_path() const { return _path; }
 
+    //! Get the tire name
+    const std::string& get_name() const { return _name; }
+
     //! Print the tire
     //! @param[inout] os: output stream
     std::ostream& print(std::ostream& os) const;

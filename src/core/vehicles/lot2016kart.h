@@ -264,6 +264,18 @@ struct lot2016kart_all
         curvilinear_ad.add_parameter(parameter_name, std::forward<Args>(args)...);
     }
 
+    void set_wet_surface(scalar base_grip_multiplier,
+                         scalar dry_line_penalty,
+                         scalar dry_line_width,
+                         const std::vector<scalar>& arclength,
+                         const std::vector<scalar>& dry_line_lateral_displacement)
+    {
+        curvilinear_scalar.set_wet_surface(base_grip_multiplier, dry_line_penalty, dry_line_width,
+                                           arclength, dry_line_lateral_displacement);
+        curvilinear_ad.set_wet_surface(base_grip_multiplier, dry_line_penalty, dry_line_width,
+                                       arclength, dry_line_lateral_displacement);
+    }
+
     lot2016kart<scalar>::cartesian                 cartesian_scalar;
     lot2016kart<scalar>::curvilinear_p             curvilinear_scalar;
     lot2016kart<CppAD::AD<scalar>>::cartesian      cartesian_ad;
